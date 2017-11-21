@@ -1,1 +1,0 @@
-This is Basim. Will receive read_ctrl from FD 7, write_ctrl to FD 10, data from FD 11

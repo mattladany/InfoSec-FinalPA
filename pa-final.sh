@@ -4,11 +4,11 @@ echo "Script to run the Final PA"
 echo "By: Matt Ladany"
 echo
 
-rm -f dispatcher amal/amal amal/logAmal.txt basim/basim basim/logBasim.txt basim/bunny.mp4 kdc/kdc
+rm -f dispatcher amal/amal amal/amal.log basim/basim basim/basim.log basim/bunny.mp4 kdc/kdc kdc/kdc.log
 
 echo "=============================="
 echo "Compiling all source"
-    gcc genKey.c -o genKey -lcrypto
+    gcc genKey.c                    -o genKey       -lcrypto
 	gcc amal/amal.c    myCrypto.c   -o amal/amal    -lcrypto
 	gcc basim/basim.c  myCrypto.c   -o basim/basim  -lcrypto
     gcc kdc/kdc.c      myCrypto.c   -o kdc/kdc      -lcrypto
@@ -38,15 +38,15 @@ diff -s amal/bunny.mp4 basim/bunny.mp4
 
 echo
 echo "==========  KDC's  LOG  =========="
-cat kdc/logKDC.txt
+cat kdc/kdc.log
 
 echo
 echo "==========  Amal's  LOG  =========="
-cat amal/logAmal.txt
+cat amal/amal.log
 
 echo
 echo "==========  Basim's  LOG  =========="
-cat basim/logBasim.txt
+cat basim/basim.log
 echo
 echo
 

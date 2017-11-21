@@ -20,6 +20,7 @@ Submitted on:
 #include <openssl/bio.h>
 #include <openssl/bn.h>
 #include <openssl/dh.h>
+#include <openssl/rand.h>
 
 void   handleErrors( char *msg) ;
 RSA    *getRSAfromFile(char * filename, int public) ;

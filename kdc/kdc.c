@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     int fd_read = atoi(argv[1]);
     int fd_write = atoi(argv[2]);
 
-    FILE* log = fopen("kdc/logKDC.txt", "w");
+    FILE* log = fopen("kdc/kdc.log", "w");
     if(!log) {
         fprintf(stderr, "This is the KDC. Could not create log file\n");
         exit(-1);
@@ -36,8 +36,12 @@ int main(int argc, char* argv[]) {
 
 
     // Receive message from Amal, encrypted by Amal's master key.
+    uint32_t message1_len;
+    char* message1;
+    read(fd_read, &message1_len, sizeof(uint32_t));
+    read(fd_read, message1, message1_len);
 
-
+    fprintf(log, "This is the KDC. Message received is: %s\n", message1);
 
     // Send encrypted message to Amal, with the new session key.
 

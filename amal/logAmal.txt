@@ -1,1 +1,0 @@
-This is Amal. Will send write_kdc to FD 4, read_kdc from FD 5, send write_basim to FD 8, read_basim from FD 9, Data to FD 8

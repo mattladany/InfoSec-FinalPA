@@ -31,7 +31,7 @@ int main ( int argc , char * argv[] )
     int fd_read_basim = atoi( argv[4] );
     int fd_data = atoi( argv[5] ) ;
 
-    FILE* log = fopen("amal/logAmal.txt" , "w" );
+    FILE* log = fopen("amal/amal.log" , "w" );
     if( ! log )
     {
         fprintf( stderr , "This is Amal. Could not create log file\n");
@@ -42,7 +42,28 @@ int main ( int argc , char * argv[] )
 
     // Send ID of Amal, ID of Basim, and Nonce to KDC
 
+    char* amal_name = "amal";
+    uint32_t amal_name_size = 4;
+    char* basim_name = "basim";
+    uint32_t basim_name_size = 5;
 
+    uint8_t nonce_a[32];
+    unsigned nonce_a_len = 32;
+
+    uint32_t message1_len = 4+amal_name_size + 4+basim_name_size + 4+nonce_a_len;
+    char* message1 = malloc(message1_len);
+
+    // Generating random bytes to for the nonce
+    RAND_bytes(nonce_a, nonce_a_len);
+
+    fprintf(log, "Random bytes are: %s\n", nonce_a);
+
+    snprintf(message1, message1_len, "%d%s%d%s%d%s", amal_name_size, amal_name,
+             basim_name_size, basim_name, nonce_a_len, nonce_a);
+    fprintf(log, "Message being sent to the KDC: %s\n", message1);
+
+    write(fd_write_kdc, &message1_len, sizeof(uint32_t));
+    write(fd_write_kdc, message1, message1_len);
 
     // Receive encrypted message from KDC, that holds the generated session
     //  key, as well as the message to send to Basim.

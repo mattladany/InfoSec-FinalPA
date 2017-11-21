@@ -28,7 +28,7 @@ int main ( int argc , char * argv[] )
     int fd_write_ctrl = atoi( argv[2] ) ;
     int fd_data = atoi( argv[3] ) ;
 
-    FILE* log = fopen("basim/logBasim.txt" , "w" );
+    FILE* log = fopen("basim/basim.log" , "w" );
     if( ! log )
     {
         fprintf( stderr , "This is Basim. Could not create log file\n");

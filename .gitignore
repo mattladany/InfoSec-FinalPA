@@ -16,3 +16,4 @@ hs_err_pid*
 
 # Extra files
 basim/bunny.mp4
+*.swp
