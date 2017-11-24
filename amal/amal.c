@@ -58,7 +58,6 @@ int main ( int argc , char * argv[] )
     // Generating random bytes to for the nonce
     RAND_bytes(nonce_a, nonce_a_len);
 
-
     memcpy(message1, &amal_name_size, sizeof(uint32_t));
     memcpy(message1+INT_SIZE, amal_name, amal_name_size);
     memcpy(message1+INT_SIZE+amal_name_size, &basim_name_size, sizeof(uint32_t));
@@ -69,12 +68,90 @@ int main ( int argc , char * argv[] )
     fprintf(log, "Sending session key generation request to the KDC...\n");
     write(fd_write_kdc, message1, message1_len);
 
-    fprintf(log, "-----------------------------\n");
+    fprintf(log, "-----------------------------------\n");
 
     // Receive encrypted message from KDC, that holds the generated session
     //  key, as well as the message to send to Basim.
 
+    uint32_t iv1_len;
+    read(fd_read_kdc, &iv1_len, sizeof(uint32_t));
+    char iv1[iv1_len];
+    read(fd_read_kdc, iv1, iv1_len);
+    uint32_t message2_encrypted_len;
+    read(fd_read_kdc, &message2_encrypted_len, sizeof(uint32_t));
+    char message2_encrypted[message2_encrypted_len];
+    read(fd_read_kdc, message2_encrypted, message2_encrypted_len);
 
+    fprintf(log, "Message 2 received from the KDC\n");
+
+    // Getting up amal's master key
+    int amal_master_fd;
+    amal_master_fd = open("amal_master_key.bin", O_RDONLY);
+    
+    char amal_master_key[32];
+    read(amal_master_fd, amal_master_key, 32);
+
+    close(amal_master_fd);
+
+    // Decrypting the message received
+    char message2_decrypted[message2_encrypted_len];
+    uint32_t message2_decrypted_len = decrypt(message2_encrypted, message2_encrypted_len,
+        amal_master_key, iv1, message2_decrypted);
+
+    fprintf(log, "Message 2 decrypted.\n");
+
+    /*****  Reading the decrypted message *****/
+    // Getting the session key
+    uint32_t session_key_len;
+    uint8_t session_key_len_array[4];
+
+    memcpy(session_key_len_array, message2_decrypted, sizeof(uint32_t));
+    session_key_len = *(uint32_t*)session_key_len_array;
+
+    char session_key[session_key_len];
+    memcpy(session_key, message2_decrypted+4, session_key_len);
+
+    fprintf(log, "\nSession Key:\n");
+    BIO_dump(BIO_new_fp(log, BIO_NOCLOSE), session_key, session_key_len);
+
+    // Getting the ID back
+    uint32_t id_rec_len;
+    uint8_t id_rec_len_array[4];
+
+    memcpy(id_rec_len_array, message2_decrypted+4+session_key_len, sizeof(uint32_t));
+    id_rec_len = *(uint32_t*)id_rec_len_array;
+
+    char id_rec[id_rec_len];
+    memcpy(id_rec, message2_decrypted+4+session_key_len+4, id_rec_len);
+
+    // Verifying the ID matches the sender of Message 1...
+    if (strncmp(amal_name, id_rec, amal_name_size) != 0) {
+        fprintf(log, "ID recieved from the KDC is not Amal. Exiting...\n");
+        exit(-1);
+    }
+
+    fprintf(log, "\nID verified.\n");
+
+    // Getting the Nonce back
+    uint32_t nonce_a_rec_len;
+    uint8_t nonce_a_rec_len_array[4];
+
+    memcpy(nonce_a_rec_len_array, message2_decrypted+4+session_key_len+4+id_rec_len, sizeof(uint32_t));
+    nonce_a_rec_len = *(uint32_t*)nonce_a_rec_len_array;
+
+    char nonce_a_rec[nonce_a_rec_len];
+    memcpy(nonce_a_rec, message2_decrypted+4+session_key_len+4+id_rec_len+4, nonce_a_rec_len);
+
+    // Verifying nonce_a matches the received nonce from the KDC...
+    size_t i;
+    for (i = 0; i < nonce_a_len; i++) {
+        if (strncmp(nonce_a+i, nonce_a_rec+i, 1) != 0) {
+            fprintf(log, "Nonce received is not equivalent to the original Nonce. Exiting...\n");
+            exit(-1);
+        }
+    }
+
+    fprintf(log, "Nonce received from KDC verified.\n");
 
     // Send encrypted message from KDC, with another Nonce, to Basim
 

@@ -180,14 +180,16 @@ int encrypt(unsigned char* plaintext, int plaintext_len, unsigned char* key,
     if (1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len))
         handleErrors("EncryptUpdate failed.");
 
+    ciphertext_len = len;
+
     if (1 != EVP_EncryptFinal_ex(ctx, ciphertext+len, &len))
         handleErrors("EncryptFinal failed.");
+
+    ciphertext_len += len;
 
     EVP_CIPHER_CTX_free(ctx);
 
     return ciphertext_len;
-
-    return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -201,17 +203,18 @@ int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key,
     if (!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors("Context creation failed.");
 
-    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+    if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
         handleErrors("Context initialization failed.");
 
     if (1 != EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len))
         handleErrors("EncryptUpdate failed.");
+    plaintext_len = len;
 
     if (1 != EVP_DecryptFinal_ex(ctx, plaintext+len, &len))
         handleErrors("EncryptFinal failed.");
+    plaintext_len += len;
 
     EVP_CIPHER_CTX_free(ctx);
 
     return plaintext_len;
-
 }

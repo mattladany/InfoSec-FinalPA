@@ -109,14 +109,10 @@ int main(int argc, char* argv[]) {
     memcpy(second_half_plain+4+session_key_len, &id1_len, sizeof(uint32_t));
     memcpy(second_half_plain+4+session_key_len+4, id1, id1_len);
 
-    fprintf(log, "second_half_plain_size: %d\n", second_half_plain_size); 
- 
     // Encrypting the second half with Basim's master key 
     char second_half_ciphertext[65536];
     uint32_t second_half_ciphertext_len = encrypt(second_half_plain, second_half_plain_size,
         basim_master_key, basim_iv, second_half_ciphertext);
-
-    fprintf(log, "second_half_ciphertext_len: %d\n", second_half_ciphertext_len);
 
     // Creating the second half of the message, with the IV and Ciphertext to be sent
     //  to Basim after decryption by Amal.
