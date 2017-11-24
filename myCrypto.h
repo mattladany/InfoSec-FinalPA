@@ -1,8 +1,9 @@
 /*----------------------------------------------------------------------------
-PA-02: Messaage Digest using Pipes
+Final PA: Enhanced Needham-Schroeder Protocol Implementation
+
 Written By: 
-     1- Dr. Mohamed Aboutabl
-Submitted on: 
+     1- Matt Ladany
+Submitted on: December 3, 2017
 ----------------------------------------------------------------------------*/
 
 #include <unistd.h>
@@ -49,3 +50,14 @@ int elgamalValidate( const uint8_t *digest , int len ,
 // Use the prime 'q', the primitive root 'gen', and the public 'y'
 // to validate the Elgamal signature (r,s) on the 'len'-byte long 'digest'
 // Return 1 if valid, 0 otherswise
+
+int encrypt(unsigned char* plaintext, int plaintext_len, unsigned char* key,
+            unsigned char* iv, unsigned char* ciphertext);
+// encrypt() function taken from:
+//  https://wiki.openssl.org/index.php/EVP_Symmetric_Encryption_and_Decryption.
+ 
+int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key,
+            unsigned char* iv, unsigned char* plaintext);
+// decrypt() function taken from:
+//  https://wiki.openssl.org/index.php/EVP_Symmetric_Encryption_and_Decryption.
+

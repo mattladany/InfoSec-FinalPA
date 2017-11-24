@@ -13,8 +13,8 @@ Generate master keys and save to binary files
 #include <openssl/rand.h>
 void main()
 {
-    uint8_t key[EVP_MAX_KEY_LENGTH] ;
-    unsigned key_len = EVP_MAX_KEY_LENGTH ;
+    uint8_t key[32] ;
+    unsigned key_len = 32 ;
     int fd_key ;
 
     fd_key = open("amal_master_key.bin", O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR) ;

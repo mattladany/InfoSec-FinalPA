@@ -42,28 +42,34 @@ int main ( int argc , char * argv[] )
 
     // Send ID of Amal, ID of Basim, and Nonce to KDC
 
-    char* amal_name = "amal";
-    uint32_t amal_name_size = 4;
-    char* basim_name = "basim";
-    uint32_t basim_name_size = 5;
+    char amal_name[] = "amal\0";
+    uint32_t amal_name_size = strlen(amal_name) + 1;
+    char basim_name[] = "basim\0";
+    uint32_t basim_name_size = strlen(basim_name) + 1;
+
+    const int INT_SIZE = 4;
 
     uint8_t nonce_a[32];
     unsigned nonce_a_len = 32;
 
-    uint32_t message1_len = 4+amal_name_size + 4+basim_name_size + 4+nonce_a_len;
-    char* message1 = malloc(message1_len);
+    uint32_t message1_len = INT_SIZE+amal_name_size + INT_SIZE+basim_name_size + INT_SIZE+nonce_a_len;
+    char message1[message1_len];
 
     // Generating random bytes to for the nonce
     RAND_bytes(nonce_a, nonce_a_len);
 
-    fprintf(log, "Random bytes are: %s\n", nonce_a);
 
-    snprintf(message1, message1_len, "%d%s%d%s%d%s", amal_name_size, amal_name,
-             basim_name_size, basim_name, nonce_a_len, nonce_a);
-    fprintf(log, "Message being sent to the KDC: %s\n", message1);
-
-    write(fd_write_kdc, &message1_len, sizeof(uint32_t));
+    memcpy(message1, &amal_name_size, sizeof(uint32_t));
+    memcpy(message1+INT_SIZE, amal_name, amal_name_size);
+    memcpy(message1+INT_SIZE+amal_name_size, &basim_name_size, sizeof(uint32_t));
+    memcpy(message1+INT_SIZE+amal_name_size+INT_SIZE, basim_name, basim_name_size);
+    memcpy(message1+INT_SIZE+amal_name_size+INT_SIZE+basim_name_size, &nonce_a_len, INT_SIZE);
+    memcpy(message1+INT_SIZE+amal_name_size+INT_SIZE+basim_name_size+INT_SIZE, nonce_a, nonce_a_len);
+ 
+    fprintf(log, "Sending session key generation request to the KDC...\n");
     write(fd_write_kdc, message1, message1_len);
+
+    fprintf(log, "-----------------------------\n");
 
     // Receive encrypted message from KDC, that holds the generated session
     //  key, as well as the message to send to Basim.
