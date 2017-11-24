@@ -45,6 +45,13 @@ int main ( int argc , char * argv[] )
     }
 
 
+    // Receive message 3 from Amal
+
+
+    // Send message 4 to Amal
+
+
+    // Receive message 5 from Amal
 
     EVP_cleanup();
     ERR_free_strings();
