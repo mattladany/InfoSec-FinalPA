@@ -153,9 +153,44 @@ int main ( int argc , char * argv[] )
 
     fprintf(log, "Nonce received from KDC verified.\n");
 
+    // Getting the encryption section in Message 2 to send to Basim.
+    uint32_t message3_data_len;
+    uint8_t message3_data_len_array[4];
+
+    memcpy(message3_data_len_array,
+        message2_decrypted+4+session_key_len+4+id_rec_len+4+nonce_a_rec_len,
+        sizeof(uint32_t));
+    message3_data_len = *(uint32_t*)message3_data_len_array;
+
+    char message3_data[message3_data_len];
+    memcpy(message3_data,
+        message2_decrypted+4+session_key_len+4+id_rec_len+4+nonce_a_rec_len+4,
+        message3_data_len);
+
+    // Generating another nonce, to be sent to Basim
+    uint32_t nonce_a2_len = 32;
+    char nonce_a2[nonce_a2_len];
+
+    RAND_bytes(nonce_a2, nonce_a2_len);
+
+    fprintf(log, "Nonce_a2 generated.\n");
+    fflush(log);
+
+    // Constructing message 3
+    uint32_t message3_len = 4+message3_data_len+4+nonce_a2_len;
+    char* message3 = calloc(1, message3_len);
+
+    memcpy(message3, &message3_data_len, sizeof(uint32_t));
+    memcpy(message3+4, message3_data, message3_data_len);
+    memcpy(message3+4+message3_data_len, &nonce_a2_len, sizeof(uint32_t));
+    memcpy(message3+4+message3_data_len+4, nonce_a2, nonce_a2_len);
+
     // Send encrypted message from KDC, with another Nonce, to Basim
 
-
+    fprintf(log, "Sending message 3 to Basim...\n");
+    fflush(log);
+    write(fd_write_basim, message3, message3_len);
+    fprintf(log, "Message 3 sent.\n");
 
     // Receive message from Basim, encrypted by the session key
 
