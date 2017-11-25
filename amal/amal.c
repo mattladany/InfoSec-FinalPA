@@ -237,7 +237,7 @@ int main ( int argc , char * argv[] )
         }
     }
 
-    fprintf(log, "Nonce_a2 has been verified.\n");
+    fprintf(log, "Nonce_a2 has been verified.\nBasim has now been authenticated.\nStarting to construct message 5.\n");
 
     // Getting nonce_b sent by Basim.
     uint32_t nonce_b_rec_len;
@@ -250,11 +250,42 @@ int main ( int argc , char * argv[] )
     memcpy(nonce_b_rec, message4_plain+4+f_nonce_a2_rec_len+4, nonce_b_rec_len);
 
     // TODO: Apply function on nonce_b
+    uint32_t f_nonce_b_len = nonce_b_rec_len;
+    char f_nonce_b[f_nonce_b_len];
+    memcpy(f_nonce_b, nonce_b_rec, f_nonce_b_len);
+
+    // Constructing the plaintext for message 5, to be encrypted.
+    uint32_t message5_plain_len = 4+f_nonce_b_len;
+    char message5_plain[message5_plain_len];
+    memcpy(message5_plain, &f_nonce_b_len, sizeof(uint32_t));
+    memcpy(message5_plain+4, f_nonce_b, f_nonce_b_len);
+
+    // Generating IV for encrypting message 5.
+    uint32_t m5_iv_len = EVP_MAX_IV_LENGTH;
+    char m5_iv[m5_iv_len];
+    RAND_bytes(m5_iv, m5_iv_len);
+
+    // Encrypting the message 5 plaintext.
+    char message5_ciphertext[65536];
+    uint32_t message5_ciphertext_len = encrypt(message5_plain, message5_plain_len,
+        session_key, m5_iv, message5_ciphertext);
+
+    // Constructing message 5.
+    uint32_t message5_len = 4+m5_iv_len+4+message5_ciphertext_len;
+    char* message5 = calloc(1, message5_len);
+
+    memcpy(message5, &m5_iv_len, sizeof(uint32_t));
+    memcpy(message5+4, m5_iv, m5_iv_len);
+    memcpy(message5+4+m5_iv_len, &message5_ciphertext_len, sizeof(uint32_t));
+    memcpy(message5+4+m5_iv_len+4, message5_ciphertext, message5_ciphertext_len);
 
     // Send nonce recieved from Basim, back to him, after applying a function on it.
 
+    fprintf(log, "Sending message 5 to Basim...\n");
+    write(fd_write_basim, message5, message5_len);
+    fprintf(log, "Message 5 sent.\n");
 
-
+    // Sending encrypted bunny.mp4 file to Basim
 
     EVP_cleanup();
     ERR_free_strings();

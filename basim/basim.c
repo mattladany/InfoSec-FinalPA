@@ -166,11 +166,58 @@ int main ( int argc , char * argv[] )
     fflush(log);
     write(fd_write_ctrl, message4, message4_len);
     fprintf(log, "Message 4 sent.\n");
+    fprintf(log, "-------------------------------------\n");
 
-        // Receive message 5 from Amal
+    // Receive message 5 from Amal
+    uint32_t m5_iv_len;
+    read(fd_read_ctrl, &m5_iv_len, sizeof(uint32_t));
+    char m5_iv[m5_iv_len];
+    read(fd_read_ctrl, m5_iv, m5_iv_len);
+
+    uint32_t message5_ciphertext_len;
+    read(fd_read_ctrl, &message5_ciphertext_len, sizeof(uint32_t));
+    char message5_ciphertext[message5_ciphertext_len];
+    read(fd_read_ctrl, message5_ciphertext, message5_ciphertext_len);
+
+    fprintf(log, "Message 5 received.\n");
+
+    // Decrypting the ciphertext received in message 5.
+    char message5_plain[message5_ciphertext_len];
+    uint32_t message5_plain_len = decrypt(message5_ciphertext, message5_ciphertext_len,
+        session_key, m5_iv, message5_plain);
+
+    fprintf(log, "Message 5 decrypted\n");
 
 
-    
+    // Getting f_nonce_b_rec from message 5.
+    uint32_t f_nonce_b_rec_len;
+    uint8_t f_nonce_b_rec_len_array[4];
+
+    memcpy(f_nonce_b_rec_len_array, message5_plain, sizeof(uint32_t));
+    f_nonce_b_rec_len = *(uint32_t*)f_nonce_b_rec_len_array;
+
+    char f_nonce_b_rec[f_nonce_b_rec_len];
+    memcpy(f_nonce_b_rec, message5_plain+4, f_nonce_b_rec_len);
+
+    // TODO: Reversing the applied function on f_nonce_b_rec
+    uint32_t nonce_b_rec_len = f_nonce_b_rec_len;
+    char nonce_b_rec[nonce_b_rec_len];
+    memcpy(nonce_b_rec, f_nonce_b_rec, nonce_b_rec_len);
+
+    // Verifying that nonce_b_rec is equivalent to nonce_b
+    size_t i;
+    for (i = 0; i < nonce_b_len; i++) {
+        if (strncmp(nonce_b+i, nonce_b_rec+i, 1) != 0) {
+            fprintf(log, "Nonce received is not equivalent to the original Nonce. Exiting...\n");
+            exit(-1);
+        }
+    }
+
+    fprintf(log, "Nonce_b has been verified.\n");
+    fprintf(log, "Amal has now been authenticated.\n");
+    fprintf(log, "Secure, authenticated communication can now exist between Amal and Basim\n");
+
+
 
     EVP_cleanup();
     ERR_free_strings();
