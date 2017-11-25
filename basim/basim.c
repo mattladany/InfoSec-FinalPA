@@ -44,9 +44,78 @@ int main ( int argc , char * argv[] )
         exit(-1) ;
     }
 
+    char database_item[] = "amal";
 
     // Receive message 3 from Amal
 
+    fprintf(log, "Starting to receive message 3...\n");
+    fflush(log);
+
+    uint32_t message3_total_len;
+    read(fd_read_ctrl, &message3_total_len, sizeof(uint32_t));
+    uint32_t message3_iv_len;
+    read(fd_read_ctrl,&message3_iv_len, sizeof(uint32_t));
+    char message3_iv[message3_iv_len];
+    read(fd_read_ctrl, message3_iv, message3_iv_len);
+
+
+    uint32_t message3_encrypted_len;
+    read(fd_read_ctrl, &message3_encrypted_len, sizeof(uint32_t));
+    char message3_encrypted[message3_encrypted_len];
+    read(fd_read_ctrl, message3_encrypted, message3_encrypted_len);
+    uint32_t nonce_a2_len;
+    read(fd_read_ctrl, &nonce_a2_len, sizeof(uint32_t));
+    char nonce_a2[nonce_a2_len];
+    read(fd_read_ctrl, nonce_a2, nonce_a2_len);
+
+    fprintf(log, "Message 3 received.\n");
+    
+    // Opening up Basim's master key
+
+    int basim_master_fd;
+    char basim_master_key[32];
+    basim_master_fd = open("basim_master_key.bin", O_RDONLY);
+    read(basim_master_fd, basim_master_key, 32);
+
+    // Decrypt the encrypted message
+
+    fprintf(log, "Decrypting message 3.\n");
+
+    char message3_decrypted[message3_encrypted_len];
+    uint32_t message3_decrypted_len = decrypt(message3_encrypted, message3_encrypted_len, basim_master_key, message3_iv, message3_decrypted);
+
+    fprintf(log, "Message 3 has been decrypted.\n");
+
+    // Getting the session key
+    uint32_t session_key_len;
+    uint8_t session_key_len_array[4];
+
+    memcpy(session_key_len_array, message3_decrypted, sizeof(uint32_t));
+    session_key_len = *(uint32_t*)session_key_len_array;
+
+    char session_key[session_key_len];
+    memcpy(session_key, message3_decrypted+4, session_key_len);
+
+    fprintf(log, "\nSession key:\n");
+    BIO_dump(BIO_new_fp(log, BIO_NOCLOSE), session_key, session_key_len);     
+
+    // Getting the ID of the sender that was encrypted by Basim's master key by the KDC.
+    uint32_t id_rec_len;
+    uint8_t id_rec_len_array[4];
+
+    memcpy(id_rec_len_array, message3_decrypted+4+session_key_len, sizeof(uint32_t));
+    id_rec_len = *(uint32_t*)id_rec_len_array;
+
+    char id_rec[id_rec_len];
+    memcpy(id_rec, message3_decrypted+4+session_key_len+4, id_rec_len);
+
+    // Verifying the ID
+    if (strncmp(database_item, id_rec, strlen(database_item)) != 0) {
+        fprintf(log, "ID is not Amal. Exiting...\n");
+        exit(-1);
+    }
+
+    fprintf(log, "\nID has been verified.\n");
 
     // Send message 4 to Amal
 
