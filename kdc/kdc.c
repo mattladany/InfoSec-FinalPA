@@ -55,10 +55,7 @@ int main(int argc, char* argv[]) {
     char nonce_a[nonce_a_len];
     read(fd_read, nonce_a, nonce_a_len);
 
-//    fprintf(log, "This is the KDC. ID1len is: %d\n ID1 is: %s\nID2len is: %d\nID2 is: %s\nNoncelen is: %d\nNonce is %s\n"
-//          ,id1_len, id1, id2_len, id2, nonce_a_len, nonce_a);
-
-    fprintf(log, "Message recebasim_ived from Amal\n");
+    fprintf(log, "Message received from Amal\n");
 
 
     // Verify ID's

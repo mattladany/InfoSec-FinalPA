@@ -76,6 +76,7 @@ int main ( int argc , char * argv[] )
     char basim_master_key[32];
     basim_master_fd = open("basim_master_key.bin", O_RDONLY);
     read(basim_master_fd, basim_master_key, 32);
+    close(basim_master_fd);
 
     // Decrypt the encrypted message
 
@@ -115,12 +116,56 @@ int main ( int argc , char * argv[] )
         exit(-1);
     }
 
-    fprintf(log, "\nID has been verified.\n");
+    fprintf(log, "\nID has been verified.\nStarting to construct message 4.\n");
+
+    /***** Constructing Message 4. *****/
+    // Generating Nonce_b
+    uint32_t nonce_b_len = 32;
+    uint8_t nonce_b[nonce_b_len];
+    RAND_bytes(nonce_b, nonce_b_len);
+
+    // TODO: Apply function on nonce_a2
+    uint32_t f_nonce_a2_len = nonce_a2_len;
+    char f_nonce_a2[f_nonce_a2_len];
+    memcpy(f_nonce_a2, nonce_a2, f_nonce_a2_len);
+
+    // Concatinating data and their sizes, together, to be encrypted.
+    uint32_t message4_plain_len = 4 + f_nonce_a2_len + 4 + nonce_b_len;
+    char message4_plain[message4_plain_len];
+    memcpy(message4_plain, &f_nonce_a2_len, sizeof(uint32_t));
+    memcpy(message4_plain+4, f_nonce_a2, f_nonce_a2_len);
+    memcpy(message4_plain+4+f_nonce_a2_len, &nonce_b_len, sizeof(uint32_t));
+    memcpy(message4_plain+4+f_nonce_a2_len+4, nonce_b, nonce_b_len);
+
+    // Generate the IV to use for encrypting message4.
+    uint32_t message4_iv_len = EVP_MAX_IV_LENGTH;
+    uint8_t message4_iv[message4_iv_len];
+    RAND_bytes(message4_iv, message4_iv_len);
+
+    // Encrypt the plaintext for message 4 with the newly aquired session key.
+    char message4_ciphertext[65536];
+    uint32_t message4_ciphertext_len = encrypt(message4_plain, message4_plain_len,
+        session_key, message4_iv, message4_ciphertext);
+
+    fprintf(log, "Message 4 has been encrypted.\n");
+
+    // Constructing Message 4.
+    uint32_t message4_len = message4_ciphertext_len;
+    char* message4 = calloc(1, message4_len);
+    memcpy(message4, &message4_len, sizeof(uint32_t));
+    memcpy(message4+4, message4, message4_len);
 
     // Send message 4 to Amal
 
+    fprintf(log, "Sending message 4 to Amal...\n");
+    fflush(log);
+    write(fd_write_ctrl, message4, message4_len);
+    fprintf(log, "Message 4 sent.\n");
 
     // Receive message 5 from Amal
+
+
+    
 
     EVP_cleanup();
     ERR_free_strings();
