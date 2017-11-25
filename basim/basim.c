@@ -124,6 +124,8 @@ int main ( int argc , char * argv[] )
     uint8_t nonce_b[nonce_b_len];
     RAND_bytes(nonce_b, nonce_b_len);
 
+    BIO_dump(BIO_new_fp(log, BIO_NOCLOSE), nonce_b, 0);
+
     // TODO: Apply function on nonce_a2
     uint32_t f_nonce_a2_len = nonce_a2_len;
     char f_nonce_a2[f_nonce_a2_len];
@@ -142,6 +144,7 @@ int main ( int argc , char * argv[] )
     uint8_t message4_iv[message4_iv_len];
     RAND_bytes(message4_iv, message4_iv_len);
 
+
     // Encrypt the plaintext for message 4 with the newly aquired session key.
     char message4_ciphertext[65536];
     uint32_t message4_ciphertext_len = encrypt(message4_plain, message4_plain_len,
@@ -150,10 +153,12 @@ int main ( int argc , char * argv[] )
     fprintf(log, "Message 4 has been encrypted.\n");
 
     // Constructing Message 4.
-    uint32_t message4_len = message4_ciphertext_len;
+    uint32_t message4_len = 4+message4_iv_len+4+message4_ciphertext_len;
     char* message4 = calloc(1, message4_len);
-    memcpy(message4, &message4_len, sizeof(uint32_t));
-    memcpy(message4+4, message4, message4_len);
+    memcpy(message4, &message4_iv_len, sizeof(uint32_t));
+    memcpy(message4+4, message4_iv, message4_iv_len);
+    memcpy(message4+4+message4_iv_len, &message4_ciphertext_len, sizeof(uint32_t));
+    memcpy(message4+4+message4_iv_len+4, message4_ciphertext, message4_len);
 
     // Send message 4 to Amal
 
@@ -162,7 +167,7 @@ int main ( int argc , char * argv[] )
     write(fd_write_ctrl, message4, message4_len);
     fprintf(log, "Message 4 sent.\n");
 
-    // Receive message 5 from Amal
+        // Receive message 5 from Amal
 
 
     

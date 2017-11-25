@@ -188,13 +188,68 @@ int main ( int argc , char * argv[] )
     // Send encrypted message from KDC, with another Nonce, to Basim
 
     fprintf(log, "Sending message 3 to Basim...\n");
-    fflush(log);
     write(fd_write_basim, message3, message3_len);
     fprintf(log, "Message 3 sent.\n");
 
+    fprintf(log, "-----------------------------------\n");
+    fflush(log);
     // Receive message from Basim, encrypted by the session key
 
 
+    uint32_t message4_iv_len;
+    read(fd_read_basim, &message4_iv_len, sizeof(uint32_t));
+    uint8_t message4_iv[message4_iv_len];
+    read(fd_read_basim, message4_iv, message4_iv_len);
+    uint32_t message4_ciphertext_len;
+    read(fd_read_basim, &message4_ciphertext_len, sizeof(uint32_t));
+    char message4_ciphertext[message4_ciphertext_len];
+    read(fd_read_basim, message4_ciphertext, message4_ciphertext_len);
+
+    fprintf(log, "Message 4 received.\n");
+
+    // Decrypting message 4.
+    char message4_plain[message4_ciphertext_len];
+    uint32_t message4_plain_len = decrypt(message4_ciphertext, message4_ciphertext_len, session_key, message4_iv, message4_plain);
+
+    fprintf(log, "Message 4 decrypted.\n");
+
+    // Getting nonce_a2 with the applied function
+    uint32_t f_nonce_a2_rec_len;
+    uint8_t f_nonce_a2_rec_len_array[4];
+
+    memcpy(f_nonce_a2_rec_len_array, message4_plain, sizeof(uint32_t));
+    f_nonce_a2_rec_len = *(uint32_t*)f_nonce_a2_rec_len_array;
+
+    char f_nonce_a2_rec[f_nonce_a2_rec_len];
+    memcpy(f_nonce_a2_rec, message4_plain+4, f_nonce_a2_rec_len);
+
+    // TODO: Reverse the function applied, to get the original nonce.
+
+    uint32_t nonce_a2_rec_len = f_nonce_a2_rec_len;
+    uint8_t nonce_a2_rec[nonce_a2_rec_len];
+    memcpy(nonce_a2_rec, f_nonce_a2_rec, nonce_a2_rec_len);
+
+    // Verify nonce_a2 is the same as nonce_a2_rec
+    for (i = 0; i < nonce_a2_len; i++) {
+        if (strncmp(nonce_a2+i, nonce_a2_rec+i, 1) != 0) {
+            fprintf(log, "Nonce received is not equivalent to the original Nonce. Exiting...\n");
+            exit(-1);
+        }
+    }
+
+    fprintf(log, "Nonce_a2 has been verified.\n");
+
+    // Getting nonce_b sent by Basim.
+    uint32_t nonce_b_rec_len;
+    uint8_t nonce_b_rec_len_array[4];
+
+    memcpy(nonce_b_rec_len_array, message4_plain+4+f_nonce_a2_rec_len, sizeof(uint32_t));
+    nonce_b_rec_len = *(uint32_t*)nonce_b_rec_len_array;
+
+    char nonce_b_rec[nonce_b_rec_len];
+    memcpy(nonce_b_rec, message4_plain+4+f_nonce_a2_rec_len+4, nonce_b_rec_len);
+
+    // TODO: Apply function on nonce_b
 
     // Send nonce recieved from Basim, back to him, after applying a function on it.
 
