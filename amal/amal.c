@@ -29,7 +29,8 @@ int main ( int argc , char * argv[] )
     int fd_read_kdc = atoi( argv[2] );
     int fd_write_basim = atoi( argv[3] );
     int fd_read_basim = atoi( argv[4] );
-    int fd_data = atoi( argv[5] ) ;
+    int fd_write_iv = atoi( argv[5] );
+    int fd_data = atoi( argv[6] ) ;
 
     FILE* log = fopen("amal/amal.log" , "w" );
     if( ! log )
@@ -37,8 +38,8 @@ int main ( int argc , char * argv[] )
         fprintf( stderr , "This is Amal. Could not create log file\n");
         exit(-1) ;
     }
-    fprintf( log , "This is Amal. Will send write_kdc to FD %d, read_kdc from FD %d, send write_basim to FD %d, read_basim from FD %d, Data to FD %d\n",
-                   fd_write_kdc, fd_read_kdc, fd_write_basim, fd_read_basim , fd_data );
+    fprintf( log , "This is Amal. Will send write_kdc to FD %d, read_kdc from FD %d, send write_basim to FD %d, read_basim from FD %d, write_iv to FD %d, data to FD %d\n",
+                   fd_write_kdc, fd_read_kdc, fd_write_basim, fd_read_basim , fd_write_iv , fd_data );
 
     // Send ID of Amal, ID of Basim, and Nonce to KDC
 
@@ -285,7 +286,34 @@ int main ( int argc , char * argv[] )
     write(fd_write_basim, message5, message5_len);
     fprintf(log, "Message 5 sent.\n");
 
+    // Opening up the bunny.mp4 file
+    int fd_in = open("amal/bunny.mp4", O_RDONLY, S_IRUSR | S_IWUSR);
+    if (fd_in == -1) {
+        fprintf(log, "Could not open the bunny.mp4 file.\n");
+        exit(-1);
+    }
+
+    fprintf(log, "-----------------------------------\n");
+
+    // Generating the IV for the bunny.mp4 encryption
+    uint32_t data_iv_len = EVP_MAX_IV_LENGTH;
+    char data_iv[data_iv_len];
+    RAND_bytes(data_iv, data_iv_len);
+
+    uint32_t iv_message_len = 4+data_iv_len;
+    char* iv_message = calloc(1, iv_message_len);
+    memcpy(iv_message, &data_iv_len, sizeof(uint32_t));
+    memcpy(iv_message+4, data_iv, data_iv_len);
+
+    fprintf(log, "Sending IV for bunny.mp4 encryption, to Basim.\n");
+    write(fd_write_iv, iv_message, iv_message_len);
+    fprintf(log, "IV sent.\n");
+ 
     // Sending encrypted bunny.mp4 file to Basim
+//    fprintf(log, "Sending bunny.mp4 to Basim, encrypted by the session key.\n");
+//    fflush(log);
+//    encryptFile(fd_in, fd_data, session_key, data_iv);
+//    fprintf(log, "Bunny file sent.\n");
 
     EVP_cleanup();
     ERR_free_strings();

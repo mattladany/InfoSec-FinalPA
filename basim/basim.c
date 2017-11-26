@@ -26,7 +26,8 @@ int main ( int argc , char * argv[] )
     }
     int fd_read_ctrl = atoi( argv[1] ) ;
     int fd_write_ctrl = atoi( argv[2] ) ;
-    int fd_data = atoi( argv[3] ) ;
+    int fd_read_iv = atoi( argv[3] ) ;
+    int fd_data = atoi( argv[4] ) ;
 
     FILE* log = fopen("basim/basim.log" , "w" );
     if( ! log )
@@ -34,8 +35,8 @@ int main ( int argc , char * argv[] )
         fprintf( stderr , "This is Basim. Could not create log file\n");
         exit(-1) ;
     }
-    fprintf( log , "This is Basim. Will receive read_ctrl from FD %d, write_ctrl to FD %d, data from FD %d\n" ,
-                    fd_read_ctrl , fd_write_ctrl , fd_data );
+    fprintf( log , "This is Basim. Will receive read_ctrl from FD %d, write_ctrl to FD %d, read_iv from FD %d, data from FD %d\n" ,
+                    fd_read_ctrl , fd_write_ctrl , fd_read_iv , fd_data );
 
     int fd_out = open("basim/bunny.mp4" , O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR ) ;
     if( fd_out == -1 )
@@ -216,8 +217,18 @@ int main ( int argc , char * argv[] )
     fprintf(log, "Nonce_b has been verified.\n");
     fprintf(log, "Amal has now been authenticated.\n");
     fprintf(log, "Secure, authenticated communication can now exist between Amal and Basim\n");
+    fprintf(log, "-------------------------------------\n");
 
+    // Receiving the IV from Amal for the encrypted bunny.mp4 file.
+    fprintf(log, "Receiving the IV from Amal for the encrypted bunny.mp4 file.\n");
+    uint32_t iv_data_len;
+    read(fd_read_iv, &iv_data_len, sizeof(uint32_t));
+    char iv_data[iv_data_len];
+    read(fd_read_iv, iv_data, iv_data_len);
+    fprintf(log, "IV received.\n");
 
+    // Getting and decrypting the file.
+//    decryptFile(fd_data, fd_out, session_key, iv_data);
 
     EVP_cleanup();
     ERR_free_strings();
