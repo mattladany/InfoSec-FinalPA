@@ -218,7 +218,6 @@ int main ( int argc , char * argv[] )
     fprintf(log, "Amal has now been authenticated.\n");
     fprintf(log, "Secure, authenticated communication can now exist between Amal and Basim\n");
     fprintf(log, "-------------------------------------\n");
-
     // Receiving the IV from Amal for the encrypted bunny.mp4 file.
     fprintf(log, "Receiving the IV from Amal for the encrypted bunny.mp4 file.\n");
     uint32_t iv_data_len;
@@ -228,14 +227,16 @@ int main ( int argc , char * argv[] )
     fprintf(log, "IV received.\n");
 
     // Getting and decrypting the file.
-//    decryptFile(fd_data, fd_out, session_key, iv_data);
+    decryptFile(fd_data, fd_out, session_key, iv_data);
 
+    fprintf(log, "File Decrypted\n");
     EVP_cleanup();
     ERR_free_strings();
 
     fclose( log ) ;
     close( fd_write_ctrl ) ;
     close( fd_read_ctrl  ) ;
+    close( fd_read_iv ) ;
     close( fd_data ) ;
 
     return 0 ;

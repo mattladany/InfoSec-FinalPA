@@ -286,6 +286,8 @@ int main ( int argc , char * argv[] )
     write(fd_write_basim, message5, message5_len);
     fprintf(log, "Message 5 sent.\n");
 
+    fflush(log);
+
     // Opening up the bunny.mp4 file
     int fd_in = open("amal/bunny.mp4", O_RDONLY, S_IRUSR | S_IWUSR);
     if (fd_in == -1) {
@@ -310,10 +312,10 @@ int main ( int argc , char * argv[] )
     fprintf(log, "IV sent.\n");
  
     // Sending encrypted bunny.mp4 file to Basim
-//    fprintf(log, "Sending bunny.mp4 to Basim, encrypted by the session key.\n");
-//    fflush(log);
-//    encryptFile(fd_in, fd_data, session_key, data_iv);
-//    fprintf(log, "Bunny file sent.\n");
+    fprintf(log, "Sending bunny.mp4 to Basim, encrypted by the session key.\n");
+    fflush(log);
+    encryptFile(fd_in, fd_data, session_key, data_iv);
+    fprintf(log, "Bunny file sent.\n");
 
     EVP_cleanup();
     ERR_free_strings();
@@ -322,6 +324,7 @@ int main ( int argc , char * argv[] )
     close(fd_write_kdc);
     close(fd_read_basim);
     close(fd_write_basim);
+    close(fd_write_iv);
     close(fd_data);
     fclose( log ) ;
 

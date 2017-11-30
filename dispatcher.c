@@ -64,7 +64,7 @@ int main( int argc , char *argv[] )
         snprintf( arg3 , 20 , "%d" , AtoB_ctrl[WRITE_END] ) ;
         snprintf( arg4 , 20 , "%d" , BtoA_ctrl[READ_END] ) ;
         snprintf( arg5 , 20 , "%d" , AtoB_iv[WRITE_END] ) ;
-        snprintf( arg6 , 20 , "%d" , AtoB_ctrl[WRITE_END] ) ;
+        snprintf( arg6 , 20 , "%d" , AtoB_data[WRITE_END] ) ;
         
         // Now, Start Amal
         char * cmnd = "./amal/amal" ;

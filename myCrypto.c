@@ -75,98 +75,84 @@ int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key,
 }
 
 //-----------------------------------------------------------------------------
-// Function taken from PA01.
-void encryptFile( int fd_in, int fd_out, unsigned char* key, unsigned char* iv ) {
-    EVP_CIPHER_CTX* ctx;
-    int len;
 
-    char ciphertext[CIPHER_LEN_MAX];
+
+void encryptFile( int fd_in , int fd_out, unsigned char* key, unsigned char* iv )
+// Read all the incoming data from 'fd_in' file descriptor
+// Compute the SHA256 hash value of this incoming data into the array 'digest'
+// If the file descriptor 'fd_save' is > 0, store a copy of the incoming data to 'fd_save'
+// Returns actual size in bytes of the computed hash value
+//  printf(stderr, "%d\n", *size);
+{
     char buffer[PLAINTEXT_LEN_MAX];
+    char ciphertext[CIPHER_LEN_MAX];
+    EVP_CIPHER_CTX *ctx;
+    size_t bytes;
+    unsigned int  len = 0;
+    
+    if ( ! (ctx = EVP_CIPHER_CTX_new() ) )
+        handleErrors("EVP_CIPHER_CTX_new failed");
 
-    /* Create and initialize the context */
-    if( !(ctx = EVP_CIPHER_CTX_new()) )
-        handleErrors("Context creation error");
+    if( EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) != 1 )
+        handleErrors("EVP_EncryptInit failed");
 
-    /* Initialise the encryption operation. IMPORTANT - ensure you use a key
-     * and IV size appropriate for your cipher
-     * In this example we are using 256 bit AES (i.e. a 256 bit key). The
-     * IV size for *most* modes is the same as the block size. For AES this
-     * is 128 bits
-     */
-    if( 1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) )
-        handleErrors("Context initialization error");
+    
+    while(1)
+    {
+        bytes = read(fd_in, buffer, PLAINTEXT_LEN_MAX);
 
-    int bytes_read;
+        if(bytes <= 0)
+            break;
 
-    while ((bytes_read = read (fd_in, buffer, PLAINTEXT_LEN_MAX)) > 0) {
+        if (EVP_EncryptUpdate( ctx, ciphertext, &len, buffer, bytes ) != 1) 
+            handleErrors("EVP_DigestUpdate failed");            
 
-
-        /* Provide the message to be encrypted, and obtain the encrypted output.
-         * EVP_EncryptUpdate can be called multiple times if necessary 
-         */
-        if( 1 != EVP_EncryptUpdate(ctx, ciphertext, &len, buffer, bytes_read) )
-            handleErrors("EncrypteUpdate error");
-
-        write (fd_out, ciphertext, len);
-
+        write(fd_out, ciphertext, len);
     }
 
-
-
-    /* Finalize the encryption. Further ciphertext bytes may be written at
-     * this stage.
-     */
-    if( 1 != EVP_EncryptFinal_ex(ctx, ciphertext , &len) )
-       handleErrors("EncrypteFinal error");
+    if ( 1 != EVP_EncryptFinal_ex(ctx, ciphertext, &len) ) 
+        handleErrors("EVP_DigestFinal failed");
 
     write(fd_out, ciphertext, len);
 
-    /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
+
 }
 
-//-----------------------------------------------------------------------------
 // Function taken from PA01.
-void decryptFile(int fd_in, int fd_out, unsigned char* key, unsigned char* iv) {
-    EVP_CIPHER_CTX *ctx;
-    int len;
-    /* Create and initialise the context */
-    if( !(ctx = EVP_CIPHER_CTX_new()) )
-    handleErrors("Context creation error");
-
-    /* Initialise the decryption operation. IMPORTANT - ensure you use a key
-    * and IV size appropriate for your cipher
-    * In this example we are using 256 bit AES (i.e. a 256 bit key). The
-    * IV size for *most* modes is the same as the block size. For AES this
-    * is 128 bits */
-    if( 1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) )
-        handleErrors("Context initialization error");
-
-
+void decryptFile( int fd_in , int fd_out, unsigned char* key, unsigned char* iv )
+{
+    char buffer[LEN_MAX];
     char plaintext[LEN_MAX];
-    char ciphertext[LEN_MAX];
-    int bytes_read;
+    EVP_CIPHER_CTX *ctx;
+    size_t bytes;
+    unsigned int  len = 0;
+    
+    if ( ! (ctx = EVP_CIPHER_CTX_new() ) )
+        handleErrors("EVP_CIPHER_CTX_create failed");
 
-    while ((bytes_read = read(fd_in, ciphertext, sizeof(ciphertext))) > 0) {
+    if( EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) != 1 )
+        handleErrors("EVP_EncryptInit failed");
 
-        /* Provide the message to be decrypted, and obtain the plaintext output.
-        * EVP_DecryptUpdate can be called multiple times if necessary
-         */
-        if( 1 != EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, bytes_read))
-            handleErrors("DecryptUpdate error");
+    
+    while(1)
+    {
+        bytes = read(fd_in, buffer, sizeof(buffer));
 
-        write (fd_out, plaintext, len);
+        if(bytes <= 0)
+            break;
+
+        if (EVP_DecryptUpdate( ctx, plaintext, &len, buffer, bytes ) != 1) 
+            handleErrors("EVP_DigestUpdate failed");            
+
+        write(fd_out, plaintext, len);
     }
 
-    /* Finalise the decryption. Further plaintext bytes may be written at
-    * this stage.
-    */
-    if( 1 != EVP_DecryptFinal_ex(ctx, plaintext, &len) )
-        handleErrors("DecryptFinal error");
+    if ( 1 != EVP_DecryptFinal_ex(ctx, plaintext, &len) ) 
+        handleErrors("EVP_DigestFinal failed");
 
     write(fd_out, plaintext, len);
 
-    /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
 
 }
