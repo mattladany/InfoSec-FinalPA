@@ -41,6 +41,8 @@ int main ( int argc , char * argv[] )
     fprintf( log , "This is Amal. Will send write_kdc to FD %d, read_kdc from FD %d, send write_basim to FD %d, read_basim from FD %d, write_iv to FD %d, data to FD %d\n",
                    fd_write_kdc, fd_read_kdc, fd_write_basim, fd_read_basim , fd_write_iv , fd_data );
 
+    BIO* bio_fp = BIO_new_fp(log, BIO_NOCLOSE);
+
     // Send ID of Amal, ID of Basim, and Nonce to KDC
 
     char amal_name[] = "amal\0";
@@ -66,10 +68,11 @@ int main ( int argc , char * argv[] )
     memcpy(message1+INT_SIZE+amal_name_size+INT_SIZE+basim_name_size, &nonce_a_len, INT_SIZE);
     memcpy(message1+INT_SIZE+amal_name_size+INT_SIZE+basim_name_size+INT_SIZE, nonce_a, nonce_a_len);
  
-    fprintf(log, "Sending session key generation request to the KDC...\n");
+    fprintf(log, "Sending session key generation request to the KDC:\n");
+    BIO_dump(bio_fp, message1, message1_len);
     write(fd_write_kdc, message1, message1_len);
-
-    fprintf(log, "-----------------------------------\n");
+    fprintf(log, "Message 1 sent.\n");
+    fprintf(log, "---------------------------------------------------------\n");
 
     // Receive encrypted message from KDC, that holds the generated session
     //  key, as well as the message to send to Basim.
@@ -99,8 +102,8 @@ int main ( int argc , char * argv[] )
     uint32_t message2_decrypted_len = decrypt(message2_encrypted, message2_encrypted_len,
         amal_master_key, iv1, message2_decrypted);
 
-    fprintf(log, "Message 2 decrypted.\n");
-
+    fprintf(log, "Message 2 decrypted:\n");
+    BIO_dump(bio_fp, message2_decrypted, message2_decrypted_len);
     /*****  Reading the decrypted message *****/
     // Getting the session key
     uint32_t session_key_len;
@@ -188,11 +191,12 @@ int main ( int argc , char * argv[] )
 
     // Send encrypted message from KDC, with another Nonce, to Basim
 
-    fprintf(log, "Sending message 3 to Basim...\n");
+    fprintf(log, "Sending message 3 to Basim:\n");
+    BIO_dump(bio_fp, message3, message3_len);
     write(fd_write_basim, message3, message3_len);
     fprintf(log, "Message 3 sent.\n");
 
-    fprintf(log, "-----------------------------------\n");
+    fprintf(log, "---------------------------------------------------------\n");
     fflush(log);
     // Receive message from Basim, encrypted by the session key
 
@@ -212,8 +216,8 @@ int main ( int argc , char * argv[] )
     char message4_plain[message4_ciphertext_len];
     uint32_t message4_plain_len = decrypt(message4_ciphertext, message4_ciphertext_len, session_key, message4_iv, message4_plain);
 
-    fprintf(log, "Message 4 decrypted.\n");
-
+    fprintf(log, "Message 4 decrypted:\n");
+    BIO_dump(bio_fp, message4_plain, message4_plain_len);
     // Getting nonce_a2 with the applied function
     uint32_t f_nonce_a2_rec_len;
     uint8_t f_nonce_a2_rec_len_array[4];
@@ -266,6 +270,9 @@ int main ( int argc , char * argv[] )
     char m5_iv[m5_iv_len];
     RAND_bytes(m5_iv, m5_iv_len);
 
+    fprintf(log, "Message 5 unecrypted:\n");
+    BIO_dump(bio_fp, message5_plain, message5_plain_len);
+
     // Encrypting the message 5 plaintext.
     char message5_ciphertext[65536];
     uint32_t message5_ciphertext_len = encrypt(message5_plain, message5_plain_len,
@@ -295,7 +302,7 @@ int main ( int argc , char * argv[] )
         exit(-1);
     }
 
-    fprintf(log, "-----------------------------------\n");
+    fprintf(log, "---------------------------------------------------------\n");
 
     // Generating the IV for the bunny.mp4 encryption
     uint32_t data_iv_len = EVP_MAX_IV_LENGTH;
