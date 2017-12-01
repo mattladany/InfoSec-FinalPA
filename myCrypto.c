@@ -123,7 +123,7 @@ void encryptFile( int fd_in , int fd_out, unsigned char* key, unsigned char* iv 
 void decryptFile( int fd_in , int fd_out, unsigned char* key, unsigned char* iv )
 {
     char buffer[LEN_MAX];
-    char plaintext[LEN_MAX];
+    char plaintext[PLAINTEXT_LEN_MAX];
     EVP_CIPHER_CTX *ctx;
     size_t bytes;
     unsigned int  len = 0;
