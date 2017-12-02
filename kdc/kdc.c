@@ -57,8 +57,12 @@ int main(int argc, char* argv[]) {
     char nonce_a[nonce_a_len];
     read(fd_read, nonce_a, nonce_a_len);
 
-    fprintf(log, "Message received from Amal\n");
-    fprintf(log, "ID1:\n%s\nID2:\n%s\nnonce_a:\n", id1, id2);
+    fprintf(log, "Message received from Amal.\n");
+    fprintf(log, "ID1:\n");
+    BIO_dump(bio_fp, id1, id1_len);
+    fprintf(log, "ID2:\n");
+    BIO_dump(bio_fp, id2, id2_len);
+    fprintf(log, "Nonce_a:\n");
     BIO_dump(bio_fp, nonce_a, nonce_a_len);
 
     // Verify ID's

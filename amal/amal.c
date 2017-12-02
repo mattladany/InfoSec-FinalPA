@@ -204,7 +204,7 @@ int main ( int argc , char * argv[] )
 
     // Send encrypted message from KDC, with another Nonce, to Basim
 
-    fprintf(log, "Sending message 3 to Basim:\n");
+    fprintf(log, "Sending message 3 to Basim (can't be decrypted since it is encrypted with Basim's master key):\n");
     BIO_dump(bio_fp, message3, message3_len);
     write(fd_write_basim, message3, message3_len);
     fprintf(log, "Message 3 sent.\n");

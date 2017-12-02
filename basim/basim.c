@@ -71,8 +71,13 @@ int main ( int argc , char * argv[] )
     char nonce_a2[nonce_a2_len];
     read(fd_read_ctrl, nonce_a2, nonce_a2_len);
 
-    fprintf(log, "Message 3 received.\n");
-    
+    fprintf(log, "Message 3 received. IV for encrypted chunk:\n");
+    BIO_dump(bio_fp, message3_iv, message3_iv_len);
+    fprintf(log, "Message 3 encrypted chunck:\n");
+    BIO_dump(bio_fp, message3_encrypted, message3_encrypted_len);
+    fprintf(log, "Nonce received in message 3:\n");
+    BIO_dump(bio_fp, nonce_a2, nonce_a2_len);
+
     // Opening up Basim's master key
 
     int basim_master_fd;
@@ -83,7 +88,7 @@ int main ( int argc , char * argv[] )
 
     // Decrypt the encrypted message
 
-    fprintf(log, "Decrypting message 3.\n");
+    fprintf(log, "\nDecrypting message 3.\n");
 
     char message3_decrypted[message3_encrypted_len];
     uint32_t message3_decrypted_len = decrypt(message3_encrypted, message3_encrypted_len, basim_master_key, message3_iv, message3_decrypted);
@@ -121,6 +126,7 @@ int main ( int argc , char * argv[] )
     }
 
     fprintf(log, "\nID has been verified.\nStarting to construct message 4.\n");
+    fprintf(log, "---------------------------------------------------------\n");
 
     /***** Constructing Message 4. *****/
     // Generating Nonce_b
@@ -185,7 +191,7 @@ int main ( int argc , char * argv[] )
     fflush(log);
     write(fd_write_ctrl, message4, message4_len);
     fprintf(log, "Message 4 sent.\n");
-    fprintf(log, "-------------------------------------\n");
+    fprintf(log, "---------------------------------------------------------\n");
 
     // Receive message 5 from Amal
     uint32_t m5_iv_len;
@@ -233,7 +239,7 @@ int main ( int argc , char * argv[] )
     fprintf(log, "Nonce_b has been verified.\n");
     fprintf(log, "Amal has now been authenticated.\n");
     fprintf(log, "Secure, authenticated communication can now exist between Amal and Basim\n");
-    fprintf(log, "-------------------------------------\n");
+    fprintf(log, "---------------------------------------------------------\n");
 
     // Receiving the IV from Amal for the encrypted bunny.mp4 file.
     fprintf(log, "Receiving the IV from Amal for the encrypted bunny.mp4 file.\n");
