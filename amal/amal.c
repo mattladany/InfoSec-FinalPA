@@ -52,14 +52,23 @@ int main ( int argc , char * argv[] )
 
     const int INT_SIZE = 4;
 
-    uint8_t nonce_a[32];
-    unsigned nonce_a_len = 32;
+    BIGNUM* nonce_a_bn = BN_new();
+    if (!BN_rand(nonce_a_bn, 256, -1, 0)) {
+        fprintf(log, "BIGNUM randomization failed. Exiting...\n");
+        exit(-1);
+    }
+
+
+    uint8_t nonce_a[BN_num_bytes(nonce_a_bn)];
+    unsigned nonce_a_len = BN_num_bytes(nonce_a_bn);
+
+    BN_bn2bin(nonce_a_bn, nonce_a);
 
     uint32_t message1_len = INT_SIZE+amal_name_size + INT_SIZE+basim_name_size + INT_SIZE+nonce_a_len;
     char message1[message1_len];
 
     // Generating random bytes to for the nonce
-    RAND_bytes(nonce_a, nonce_a_len);
+    //RAND_bytes(nonce_a, nonce_a_len);
 
     memcpy(message1, &amal_name_size, sizeof(uint32_t));
     memcpy(message1+INT_SIZE, amal_name, amal_name_size);
@@ -146,16 +155,20 @@ int main ( int argc , char * argv[] )
     char nonce_a_rec[nonce_a_rec_len];
     memcpy(nonce_a_rec, message2_decrypted+4+session_key_len+4+id_rec_len+4, nonce_a_rec_len);
 
+    // Converting nonce_a_rec to a BIGNUM
+    BIGNUM* nonce_a_rec_bn = BN_new();
+    BN_bin2bn(nonce_a_rec, nonce_a_rec_len, nonce_a_rec_bn);
+
     // Verifying nonce_a matches the received nonce from the KDC...
-    size_t i;
-    for (i = 0; i < nonce_a_len; i++) {
-        if (strncmp(nonce_a+i, nonce_a_rec+i, 1) != 0) {
-            fprintf(log, "Nonce received is not equivalent to the original Nonce. Exiting...\n");
-            exit(-1);
-        }
+
+    if (0 != BN_cmp(nonce_a_bn, nonce_a_rec_bn)) {
+        fprintf(log, "Nonce received is not equivalent to the original nonce. Exiting...\n");
+        exit(-1);
     }
 
     fprintf(log, "Nonce received from KDC verified.\n");
+
+    BN_clear_free(nonce_a_bn); BN_clear_free(nonce_a_rec_bn);
 
     // Getting the encryption section in Message 2 to send to Basim.
     uint32_t message3_data_len;
@@ -172,13 +185,13 @@ int main ( int argc , char * argv[] )
         message3_data_len);
 
     // Generating another nonce, to be sent to Basim
-    uint32_t nonce_a2_len = 32;
+
+    BIGNUM* nonce_a2_bn = BN_new();
+    BN_rand(nonce_a2_bn, 256, -1, 0);
+    uint32_t nonce_a2_len = BN_num_bytes(nonce_a2_bn);
     char nonce_a2[nonce_a2_len];
-
-    RAND_bytes(nonce_a2, nonce_a2_len);
-
+    BN_bn2bin(nonce_a2_bn, nonce_a2);
     fprintf(log, "Nonce_a2 generated.\n");
-    fflush(log);
 
     // Constructing message 3
     uint32_t message3_len = 4+message3_data_len+4+nonce_a2_len;
@@ -228,18 +241,18 @@ int main ( int argc , char * argv[] )
     char f_nonce_a2_rec[f_nonce_a2_rec_len];
     memcpy(f_nonce_a2_rec, message4_plain+4, f_nonce_a2_rec_len);
 
-    // TODO: Reverse the function applied, to get the original nonce.
+    // Reverse the function applied, to get the original nonce.
 
-    uint32_t nonce_a2_rec_len = f_nonce_a2_rec_len;
-    uint8_t nonce_a2_rec[nonce_a2_rec_len];
-    memcpy(nonce_a2_rec, f_nonce_a2_rec, nonce_a2_rec_len);
+    BIGNUM* nonce_a2_rec_bn = BN_new();
+    BN_bin2bn(f_nonce_a2_rec, f_nonce_a2_rec_len, nonce_a2_rec_bn);
+    BIGNUM* one = BN_new();
+    BN_one(one);
+    BN_sub(nonce_a2_rec_bn, nonce_a2_rec_bn, one);
 
-    // Verify nonce_a2 is the same as nonce_a2_rec
-    for (i = 0; i < nonce_a2_len; i++) {
-        if (strncmp(nonce_a2+i, nonce_a2_rec+i, 1) != 0) {
-            fprintf(log, "Nonce received is not equivalent to the original Nonce. Exiting...\n");
-            exit(-1);
-        }
+
+    if(0 != BN_cmp(nonce_a2_bn, nonce_a2_rec_bn)) {
+        fprintf(log, "Nonce received is not equivalent to the original nonce. Exiting...\n");
+        exit(-1);
     }
 
     fprintf(log, "Nonce_a2 has been verified.\nBasim has now been authenticated.\nStarting to construct message 5.\n");
@@ -254,10 +267,17 @@ int main ( int argc , char * argv[] )
     char nonce_b_rec[nonce_b_rec_len];
     memcpy(nonce_b_rec, message4_plain+4+f_nonce_a2_rec_len+4, nonce_b_rec_len);
 
-    // TODO: Apply function on nonce_b
+    // Apply function on nonce_b
+
+    BIGNUM* nonce_b_bn = BN_new();
+    BN_bin2bn(nonce_b_rec, nonce_b_rec_len, nonce_b_bn);
+    BN_add(nonce_b_bn, nonce_b_bn, one);
+
     uint32_t f_nonce_b_len = nonce_b_rec_len;
     char f_nonce_b[f_nonce_b_len];
-    memcpy(f_nonce_b, nonce_b_rec, f_nonce_b_len);
+    //memcpy(f_nonce_b, nonce_b_rec, f_nonce_b_len);
+
+    BN_bn2bin(nonce_b_bn, f_nonce_b);
 
     // Constructing the plaintext for message 5, to be encrypted.
     uint32_t message5_plain_len = 4+f_nonce_b_len;

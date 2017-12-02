@@ -45,6 +45,8 @@ int main ( int argc , char * argv[] )
         exit(-1) ;
     }
 
+    BIO* bio_fp = BIO_new_fp(log, BIO_NOCLOSE);
+
     char database_item[] = "amal";
 
     // Receive message 3 from Amal
@@ -86,7 +88,8 @@ int main ( int argc , char * argv[] )
     char message3_decrypted[message3_encrypted_len];
     uint32_t message3_decrypted_len = decrypt(message3_encrypted, message3_encrypted_len, basim_master_key, message3_iv, message3_decrypted);
 
-    fprintf(log, "Message 3 has been decrypted.\n");
+    fprintf(log, "Message 3 has been decrypted:\n");
+    BIO_dump(bio_fp, message3_decrypted, message3_decrypted_len);
 
     // Getting the session key
     uint32_t session_key_len;
@@ -99,7 +102,7 @@ int main ( int argc , char * argv[] )
     memcpy(session_key, message3_decrypted+4, session_key_len);
 
     fprintf(log, "\nSession key:\n");
-    BIO_dump(BIO_new_fp(log, BIO_NOCLOSE), session_key, session_key_len);     
+    BIO_dump(bio_fp, session_key, session_key_len);     
 
     // Getting the ID of the sender that was encrypted by Basim's master key by the KDC.
     uint32_t id_rec_len;
@@ -121,16 +124,28 @@ int main ( int argc , char * argv[] )
 
     /***** Constructing Message 4. *****/
     // Generating Nonce_b
-    uint32_t nonce_b_len = 32;
-    uint8_t nonce_b[nonce_b_len];
-    RAND_bytes(nonce_b, nonce_b_len);
 
-    BIO_dump(BIO_new_fp(log, BIO_NOCLOSE), nonce_b, 0);
+    BIGNUM* nonce_b_bn = BN_new();
+    BN_rand(nonce_b_bn, 256, -1, 0);
+    uint32_t nonce_b_len = BN_num_bytes(nonce_b_bn);
+    char nonce_b[nonce_b_len];
+    BN_bn2bin(nonce_b_bn, nonce_b);
+ 
+    // Apply function on nonce_a2
 
-    // TODO: Apply function on nonce_a2
-    uint32_t f_nonce_a2_len = nonce_a2_len;
+    BIGNUM* nonce_a2_bn = BN_new();
+    BN_bin2bn(nonce_a2, nonce_a2_len, nonce_a2_bn);
+    BIGNUM* one = BN_new();
+    BN_one(one);
+    BN_add(nonce_a2_bn, nonce_a2_bn, one);
+
+
+    uint32_t f_nonce_a2_len = BN_num_bytes(nonce_a2_bn);
     char f_nonce_a2[f_nonce_a2_len];
-    memcpy(f_nonce_a2, nonce_a2, f_nonce_a2_len);
+    //memcpy(f_nonce_a2, nonce_a2, f_nonce_a2_len);
+
+    BN_bn2bin(nonce_a2_bn, f_nonce_a2);
+
 
     // Concatinating data and their sizes, together, to be encrypted.
     uint32_t message4_plain_len = 4 + f_nonce_a2_len + 4 + nonce_b_len;
@@ -139,6 +154,9 @@ int main ( int argc , char * argv[] )
     memcpy(message4_plain+4, f_nonce_a2, f_nonce_a2_len);
     memcpy(message4_plain+4+f_nonce_a2_len, &nonce_b_len, sizeof(uint32_t));
     memcpy(message4_plain+4+f_nonce_a2_len+4, nonce_b, nonce_b_len);
+
+    fprintf(log, "Message 4 unencrypted:\n");
+    BIO_dump(bio_fp, message4_plain, message4_plain_len);
 
     // Generate the IV to use for encrypting message4.
     uint32_t message4_iv_len = EVP_MAX_IV_LENGTH;
@@ -155,7 +173,7 @@ int main ( int argc , char * argv[] )
 
     // Constructing Message 4.
     uint32_t message4_len = 4+message4_iv_len+4+message4_ciphertext_len;
-    char* message4 = calloc(1, message4_len);
+    char message4[message4_len];
     memcpy(message4, &message4_iv_len, sizeof(uint32_t));
     memcpy(message4+4, message4_iv, message4_iv_len);
     memcpy(message4+4+message4_iv_len, &message4_ciphertext_len, sizeof(uint32_t));
@@ -187,8 +205,8 @@ int main ( int argc , char * argv[] )
     uint32_t message5_plain_len = decrypt(message5_ciphertext, message5_ciphertext_len,
         session_key, m5_iv, message5_plain);
 
-    fprintf(log, "Message 5 decrypted\n");
-
+    fprintf(log, "Message 5 decrypted:\n");
+    BIO_dump(bio_fp, message5_plain, message5_plain_len);
 
     // Getting f_nonce_b_rec from message 5.
     uint32_t f_nonce_b_rec_len;
@@ -200,24 +218,23 @@ int main ( int argc , char * argv[] )
     char f_nonce_b_rec[f_nonce_b_rec_len];
     memcpy(f_nonce_b_rec, message5_plain+4, f_nonce_b_rec_len);
 
-    // TODO: Reversing the applied function on f_nonce_b_rec
-    uint32_t nonce_b_rec_len = f_nonce_b_rec_len;
-    char nonce_b_rec[nonce_b_rec_len];
-    memcpy(nonce_b_rec, f_nonce_b_rec, nonce_b_rec_len);
+    // Reversing the applied function on f_nonce_b_rec
+
+    BIGNUM* nonce_b_rec_bn = BN_new();
+    BN_bin2bn(f_nonce_b_rec, f_nonce_b_rec_len, nonce_b_rec_bn);
+    BN_sub(nonce_b_rec_bn, nonce_b_rec_bn, one);
 
     // Verifying that nonce_b_rec is equivalent to nonce_b
-    size_t i;
-    for (i = 0; i < nonce_b_len; i++) {
-        if (strncmp(nonce_b+i, nonce_b_rec+i, 1) != 0) {
-            fprintf(log, "Nonce received is not equivalent to the original Nonce. Exiting...\n");
-            exit(-1);
-        }
+    if(BN_cmp(nonce_b_bn, nonce_b_rec_bn) != 0) {
+        fprintf(log, "Nonce received is not equivalent to the original nonce. Exiting...\n");
+        exit(-1);
     }
 
     fprintf(log, "Nonce_b has been verified.\n");
     fprintf(log, "Amal has now been authenticated.\n");
     fprintf(log, "Secure, authenticated communication can now exist between Amal and Basim\n");
     fprintf(log, "-------------------------------------\n");
+
     // Receiving the IV from Amal for the encrypted bunny.mp4 file.
     fprintf(log, "Receiving the IV from Amal for the encrypted bunny.mp4 file.\n");
     uint32_t iv_data_len;

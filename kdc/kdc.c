@@ -34,11 +34,13 @@ int main(int argc, char* argv[]) {
     fprintf(log, "This is the KDC. Will send to FD %d, and will read from FD %d\n",
                   fd_write, fd_read);
 
+    BIO* bio_fp = BIO_new_fp(log, BIO_NOCLOSE);
+
     char database_item1[] = "amal\0";
     char database_item2[] = "basim\0";
 
 
-    // Recebasim_ive message from Amal
+    // Receive message from Amal
 
     uint32_t id1_len;
     read(fd_read, &id1_len, sizeof(uint32_t));
@@ -56,7 +58,8 @@ int main(int argc, char* argv[]) {
     read(fd_read, nonce_a, nonce_a_len);
 
     fprintf(log, "Message received from Amal\n");
-
+    fprintf(log, "ID1:\n%s\nID2:\n%s\nnonce_a:\n", id1, id2);
+    BIO_dump(bio_fp, nonce_a, nonce_a_len);
 
     // Verify ID's
     if(strncmp(database_item1, id1, strlen(database_item1)) != 0) {
@@ -68,7 +71,7 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    fprintf(log, "ID's have been validated. Generating symmetric key...\n");
+    fprintf(log, "\nID's have been validated. Generating symmetric key...\n");
     
     // Generating session key
     uint8_t session_key[32];
@@ -76,8 +79,8 @@ int main(int argc, char* argv[]) {
 
     RAND_bytes(session_key, session_key_len);
     
-    fprintf(log, "\nSession key generated. Value is:\n");
-    BIO_dump(BIO_new_fp(log, BIO_NOCLOSE), (const char*)session_key, session_key_len);
+    fprintf(log, "Session key generated. Value is:\n");
+    BIO_dump(bio_fp, (const char*)session_key, session_key_len);
     
 
     // Generating the IV for the basim_master_key encryption
@@ -105,6 +108,9 @@ int main(int argc, char* argv[]) {
     memcpy(second_half_plain+4, session_key, session_key_len);
     memcpy(second_half_plain+4+session_key_len, &id1_len, sizeof(uint32_t));
     memcpy(second_half_plain+4+session_key_len+4, id1, id1_len);
+
+    fprintf(log, "\nKs || IDa with their lengths:\n");
+    BIO_dump(bio_fp, second_half_plain, second_half_plain_size);
 
     // Encrypting the second half with Basim's master key 
     char second_half_ciphertext[65536];
@@ -153,6 +159,9 @@ int main(int argc, char* argv[]) {
     memcpy(message2_plain+4+session_key_len+4+id1_len+4+nonce_a_len, &second_half_total_len, sizeof(uint32_t));
     memcpy(message2_plain+4+session_key_len+4+id1_len+4+nonce_a_len+4, second_half_total, second_half_total_len);
 
+    fprintf(log, "\nMessage2 unencrypted:\n");
+    BIO_dump(bio_fp, message2_plain, message2_plain_len);
+
     // Encrypting the full message.
     char full_ciphertext[65536];
     uint32_t full_ciphertext_len = encrypt(message2_plain, message2_plain_len, amal_master_key, amal_iv, full_ciphertext);
@@ -168,10 +177,8 @@ int main(int argc, char* argv[]) {
 
     // Send encrypted message to Amal, with the new session key.
     
-    fprintf(log, "Sending message 2 to Amal...\nMessage2 size is: %d\n", message2_len);
-    fflush(log);
+    fprintf(log, "Sending message 2 to Amal...\n");
     write(fd_write, message2, message2_len);
-    
     fprintf(log, "Message sent. KDC Exiting...\n");
 
     EVP_cleanup();
