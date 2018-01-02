@@ -1,2 +1,2 @@
 # InfoSec-FinalPA
-Needham-Shroeder Protocol (2-way Authentication) Implementation
+Needham-Schroeder Protocol (2-way Authentication) Implementation
